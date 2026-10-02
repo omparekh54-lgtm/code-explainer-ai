@@ -1,5 +1,7 @@
 # Code Explainer AI
 
+**Live app:** https://code-explainer-ai-zeta.vercel.app/
+
 An AI programming tutor that turns a code snippet into a plain-language overview, a complete line-by-line explanation, key concepts, and an interactive multiple-choice quiz.
 
 ## Features
