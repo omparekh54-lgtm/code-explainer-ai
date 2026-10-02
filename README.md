@@ -1,48 +1,68 @@
 # Code Explainer AI
 
-An AI-powered code explainer and learning app. Paste a snippet, choose beginner, intermediate or advanced, and receive a summary, explanations of every nonblank line, key concepts and an interactive quiz.
+An AI programming tutor that turns a code snippet into a plain-language overview, a complete line-by-line explanation, key concepts, and an interactive multiple-choice quiz.
 
 ## Features
 
-- Plain HTML, CSS and JavaScript, with no frontend build step.
-- Locally bundled highlight.js syntax preview.
-- Gemini via a server-side Vercel function; the API key never reaches the browser.
-- Three learning levels, immediate quiz feedback, score and retry.
-- Explicit offline demo with a fixed JavaScript example, tailored to each level.
-- Download a lesson as text. Responsive layout, keyboard navigation, reduced-motion support and visible request status.
-- Code is never executed. User-controlled text is rendered with textContent, not HTML.
-- 4,000-character / 100-line input limit, strict JSON schema and server-side response validation.
-- Five requests per minute per IP and fifteen total per minute per function instance. Five-minute in-memory response caching; no automatic paid retries.
+- Beginner, intermediate, and advanced learning levels for live explanations.
+- Code editor with syntax highlighting, line numbers, Tab indentation, and Ctrl/Cmd+Enter shortcut.
+- Language selection, auto-detection, and local text-file import.
+- Overview, line-by-line, and quiz tabs with immediate answer feedback, final score, and retry.
+- Five curated examples: Python, JavaScript, Java, C++, and SQL.
+- Explicit Demo mode that uses no API quota. Demo lessons are curated and do not vary by level.
+- Download the complete lesson as a text file.
+- Responsive layout, labeled inputs, keyboard tab navigation, focus indicators, and reduced motion support.
 
-## Local development
+## Stack and architecture
 
-Requires Node 22 or newer. No runtime packages are needed.
+Plain HTML/CSS/browser JavaScript in `public/`, and one Node.js Vercel serverless function in `api/explain.js`. highlight.js is bundled locally in `public/vendor/` with its BSD license. There are no runtime npm dependencies and no build step.
 
-```sh
-npm start
+Browser → POST `/api/explain` → input checks and usage limits → Gemini GenerateContent → JSON validation → explanation and quiz.
+
+Code is never executed. API keys remain on the server. The UI creates text nodes for model output and uploaded code rather than inserting HTML. No database, analytics, or browser persistence is used. Live responses may be retained in process memory for 10 minutes to avoid duplicate requests; caches have at most 30 entries.
+
+## Run locally
+
+Node.js 22 or newer:
+
+```bash
+npm install
 npm test
+npm run check
+npm run dev
 ```
 
-Demo works without a key. For AI mode, create an ignored `.env.local` with GEMINI_API_KEY and start with `node --env-file=.env.local server.mjs`. Never commit this file.
+Open http://localhost:3000. All five demo examples work without configuration.
 
-## Vercel
+For live AI, create a local `.env` file based on `.env.example`, add your own Gemini API key, and use:
 
-Import `omparekh54-lgtm/code-explainer-ai`. Choose **Other**, with no build command and the repository root as the output directory. Add encrypted `GEMINI_API_KEY` in project environment variables. Optional `GEMINI_MODEL` defaults to `gemini-3.8-flash`. Deploy. Static assets and `/api/explain` are handled by Vercel.
+```bash
+node --env-file=.env dev-server.js
+```
 
-## API
+Do not commit `.env` or share the key in screenshots.
 
-POST `/api/explain` with `{ "code": "console.log(1 + 2);", "level": "beginner" }`.
+## Deploy to Vercel
 
-Returns `{ summary, lines: [{number, code, explanation}], concepts: [{name, explanation}], quiz: [{question, options, answer, explanation}], mode, cached }`. Quiz answers use a zero-based index. Source lines are numbered from one; the server replaces any AI-provided code with the original source.
+1. Import this GitHub repository into Vercel.
+2. Select **Other** as the framework. Use `public` as the output directory. No build command is needed.
+3. Add `GEMINI_API_KEY` as a sensitive server environment variable for Production (and Preview only if needed).
+4. Optionally add `GEMINI_MODEL`; the default is `gemini-3.5-flash-lite`.
+5. Deploy. Test a curated demo first, then request a live explanation.
+6. If limiting access to a class or private audience, set `APP_ACCESS_CODE`. The UI asks for it only when the server requires one.
 
-## Limits and privacy
+`vercel.json` configures static output, the function timeout, and security headers.
 
-AI explanations can be wrong. Submitted code is sent to Google Gemini in AI mode; remove secrets and private code before submitting. The app does not execute code or save it to a database. A temporary cache exists in function memory for up to five minutes. Rate limits and caching are per instance and reset on cold starts; they are simple quota protection, not a distributed guarantee. Set project-level API quotas in Google AI Studio for a hard spending boundary. Model availability and free-tier quota depend on your Google project.
+## Usage safeguards and limits
 
-## Course evidence
+Requests are capped at 4,000 characters and 80 lines. The server permits 3 live requests per client per minute, at most 2 concurrent upstream calls, and 100 upstream calls per UTC day **per warm function instance**. Repeated successful requests can use a 10-minute cache. There are no automatic retries or hidden model fallbacks.
 
-See `docs/process.md` for the implemented architecture, design choices and verification, and `docs/comparison.md` for five samples and a rubric to compare two AI tools. The comparison must be performed and results recorded honestly. This repository does not claim that a second AI tool was used or fabricate a course report/video.
+These in-memory limits reset on cold starts and are not a distributed quota or a guaranteed spending cap. For a widely shared public deployment, configure provider quota/billing controls and Vercel Firewall rate limiting, or use a persistent shared limiter. `APP_ACCESS_CODE` can restrict who can make live calls. Demo mode does not call Gemini. Free-tier model availability and limits depend on the Google project; the app does not enable billing.
 
-## Third-party license
+AI output is validated structurally, but explanations are not independently verified. Review important claims. The app flags provider failures and never silently labels demo output as AI output.
 
-highlight.js is bundled in `vendor/`; its BSD-3-Clause license is included there.
+## Tests and course documentation
+
+`npm test` covers all demos, malformed input/output, secret-safe provider errors, quotas, caching, cross-origin requests, and optional access codes. Tests mock Gemini and consume no quota.
+
+See `docs/PROJECT_NOTES.md` for the real implementation record, evaluation template, and presentation outline. Do not claim a comparison with a second AI tool until you have actually conducted one.

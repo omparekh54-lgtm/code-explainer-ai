@@ -1,1 +1,1 @@
-{"name":"code-explainer-ai","version":"1.0.0","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test"},"engines":{"node":">=22"}}
+{"name":"code-explainer-ai","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"node dev-server.js","test":"node --test","check":"node --check public/app.js && node --check api/explain.js"},"engines":{"node":">=22"}}
